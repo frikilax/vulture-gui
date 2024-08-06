@@ -60,7 +60,6 @@ def build_conf(node_logger, workflow_id):
     :return:
     """
     result = ""
-    reload = False
     """ Firstly, try to retrieve Frontend with given id """
     from workflow.models import Workflow, WORKFLOW_OWNER, WORKFLOW_PERMS  # avoid circular imports
 
