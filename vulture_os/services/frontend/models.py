@@ -99,8 +99,8 @@ LISTENING_MODE_CHOICES = (
 
 REDIS_MODE_CHOICES = (
     ('queue', "Queue mode, using push/pop"),
-    ('subscribe',"Channel mode, using pub/sub"),
-    ('stream',"Stream mode, using xread/xreadgroup"),
+    ('subscribe', "Channel mode, using pub/sub"),
+    ('stream', "Stream mode, using xread/xreadgroup"),
 )
 
 REDIS_STARTID_CHOICES = (
@@ -451,7 +451,7 @@ class Frontend(models.Model):
     )
     """ Redis attributes """
     redis_mode = models.TextField(
-        default="queue",
+        default=REDIS_MODE_CHOICES[0][0],
         choices=REDIS_MODE_CHOICES,
         help_text=_("Redis comsumer mode - 'Queue' mode is recommended to avoid data loss"),
         verbose_name=_("Redis consumer mode")
@@ -755,7 +755,7 @@ class Frontend(models.Model):
         default="",
     )
     cisco_meraki_timestamp = models.JSONField(
-        default={}
+        default=dict
     )
     # Proofpoint TAP attributes
     proofpoint_tap_host = models.TextField(
@@ -1218,7 +1218,7 @@ class Frontend(models.Model):
         help_text=_("Sentinel One Mobile API integration key"),
         default="",
     )
-    #CSC DomainManager attributes
+    # CSC DomainManager attributes
     csc_domainmanager_apikey = models.TextField(
         verbose_name = ("CSC DomainManager API Key"),
         help_text = ("CSC DomainManager API Key"),
@@ -1283,10 +1283,10 @@ class Frontend(models.Model):
         default="",
     )
     apex_timestamp = models.JSONField(
-        default={}
+        default=dict
     )
     apex_page_token = models.JSONField(
-        default={}
+        default=dict
     )
     # Gatewatcher attributes
     gatewatcher_alerts_host = models.TextField(
@@ -1414,10 +1414,16 @@ class Frontend(models.Model):
         :return     Dictionnary of configuration parameters
         """
         """ Retrieve list/custom objects """
-        if self.listening_mode == "file":
+        if self.mode == "log" and self.listening_mode == "file" or\
+            self.mode == "filebeat" and self.filebeat_listening_mode == "file":
             listeners_list = [self.file_path]
-        elif self.listening_mode == "api":
+        elif self.mode == "log" and self.listening_mode == "api" or\
+            self.mode == "filebeat" and self.filebeat_listening_mode == "api":
             listeners_list = [self.api_parser_type]
+        elif self.mode == "log" and self.listening_mode == "redis":
+            listeners_list = ["Redis:", f"{self.redis_server}:{self.redis_port}"]
+        elif self.mode == "log" and self.listening_mode == "kafka":
+            listeners_list = ["Kafka:"] + self.kafka_brokers
         else:
             # Test self.pk to prevent M2M errors when object isn't saved in DB
             listeners_list = [str(l) for l in self.listener_set.all().only(*Listener.str_attrs())] if self.pk else []
@@ -1733,6 +1739,23 @@ class Frontend(models.Model):
                 result += LogOM.generate_conf(log_om, self.ruleset+"_garbage", frontend=self.name+"_garbage") + "\n"
         return result
 
+    def render_pre_ruleset(self):
+        """ Render pre_ruleset's config from self.pre_ruleset
+        :return  Str containing the rendered config
+        """
+        result = ""
+        for log_forwarder in self.log_forwarders.all():
+            log_om = LogOM().select_log_om(log_forwarder.id)
+            if log_om.enabled:
+                result += f"{log_om.generate_pre_conf(self.ruleset, frontend=self.name)}\n"
+                logger.info(f"[RENDER PRE RULESET] {log_om}")
+        for log_forwarder in self.log_forwarders_parse_failure.all():
+            log_om = LogOM().select_log_om(log_forwarder.id)
+            if log_om.enabled:
+                result += f"{log_om.generate_pre_conf(self.ruleset+'_garbage', frontend=self.name+'_garbage')}\n"
+                logger.info(f"[RENDER PRE RULESET FAILURE] {log_om}")
+        return result
+
     @property
     def api_rsyslog_port(self):
         return 20000+self.id
@@ -1769,6 +1792,7 @@ class Frontend(models.Model):
             conf['ruleset'] = self.ruleset
             conf['log_condition'] = self.render_log_condition() if self.enabled and self.enable_logging else ""
             conf['log_condition_failure'] = self.render_log_condition_failure() if self.enabled and self.enable_logging else ""
+            conf['pre_ruleset'] = self.render_pre_ruleset() if self.enabled and self.enable_logging else ""
             conf['not_internal_forwarders'] = self.log_forwarders.exclude(internal=True)
 
             darwin_actions = []
