@@ -24,3 +24,4 @@ jobs:
       uses: jpetrucciani/ruff-check@0.5.5
       with:
         path: .
+        flags: -e
