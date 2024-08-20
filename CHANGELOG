@@ -5,7 +5,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [Unreleased]
+## Unreleased
+### Added
+- [LOG_FORWARDER] [REDIS] Support for queues, sets, publish and streams modes for log insertion
+- [LOGOMELASTICSEARCH] Handle log insertion errors returned by elasticsearch
+- [LOGOM] Add the ability to define the spooling directory for DA queues
+- [NETWORK] Automatically select the best interface for outgoing Backend/LogForwarders using system routes
+### Changed
+- [DEPENDENCIES] Upgrade djongo and code for pymongo>=4
+- [FRONTEND] [GUI] Improve binding information for Filebeat, Redis and Kafka listeners
+- [CRON] Update Reputation Context DBs at 6:00am instead of 2:00am
+- [LOGOM] Increment checkpoint interval for DA queues, to increase performances
+- [LOGOM] Code and logic factorization
+- [LOGOM] Allow to deactivate limitation of the size of DA queues on disk
+- [LOGOM] [ELASTICSEARCH] Limit available certificates to non-CA ones
+- [API_PARSER] [CROWDSTRIKE] Allow to disable fetching of 'incident' logs
+### Fixed
+- [NETWORK] Correctly assign a new/changed IPv6 IP to an existing interface
+- [FRONTEND] JSONField default value
+- [FRONTEND] Redis settings improperly displayed
+- [NETWORK] [GUI] Prevent missing interfaces in selection when refreshing interfaces on a cluster
+- [GUI] Wrong date formatting in the task list
+- [GUI] [PF] Correctly validate and return errors when changing custom PF rules
+- [CLUSTER] [PF] Correctly reload configurations when changing SSH/GUI access rules
 
 
 ## [2.15.9] - 2024-07-25
